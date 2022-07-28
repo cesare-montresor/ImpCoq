@@ -1,7 +1,19 @@
 Require Import Unicode.Utf8.
 Require Import String.
+Require Import List.
 
-Inductive Loc: Type := string.
+Section ImpLanguage.
+
+Inductive Loc: Type := LOC: string -> Loc.
+Check Loc.
+
+Fixpoint LocEqual (loc1 loc2: Loc) : bool :=
+  match loc1 with
+  | LOC str => 
+    match loc2 with 
+    | LOC str' => eqb str str'
+    end
+  end.
 
 Inductive Aexpr: Set :=
   | N   : nat -> Aexpr
@@ -28,3 +40,17 @@ Inductive Com: Type :=
   | ASS   : Loc -> Aexpr -> Com
   | WHILE : Bexpr -> Com -> Com
 .
+
+Fixpoint readLoc (loc: Loc) (states: list (Loc * nat)) : nat := 
+  match states with
+    | (loc',n)::states => if LocEqual loc loc' then n else readLoc loc states
+    | nil => 0
+  end.
+
+(**
+Definition lista := (LOC "A", 1)::(LOC "B", 2)::(LOC "C", 3)::nil.
+Compute readLoc (LOC "A") lista.
+Compute readLoc (LOC "Z") lista.
+**)
+
+End ImpLanguage.
