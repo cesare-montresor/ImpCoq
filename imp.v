@@ -5,9 +5,11 @@ Require Import List.
 Section ImpLanguage.
 
 Inductive Loc: Type := LOC: string -> Loc.
+Definition storeT := list (Loc * nat).
 Check Loc.
+Check storeT.
 
-Fixpoint LocEqual (loc1 loc2: Loc) : bool :=
+Definition LocEqual (loc1 loc2: Loc) : bool :=
   match loc1 with
   | LOC str => 
     match loc2 with 
@@ -41,16 +43,20 @@ Inductive Com: Type :=
   | WHILE : Bexpr -> Com -> Com
 .
 
-Fixpoint readLoc (loc: Loc) (states: list (Loc * nat)) : nat := 
-  match states with
-    | (loc',n)::states => if LocEqual loc loc' then n else readLoc loc states
-    | nil => 0
+Notation "A ??" := (option A) (at level 80).
+Notation "@ A" := (LOC A) (at level 80).
+Notation "A == B" := (LocEqual A B) (at level 80).
+
+Fixpoint readLoc (loc: Loc) (store: storeT) {struct store} : nat??:= 
+  match store with
+    | (loc',n)::store => if loc==loc' then Some n else readLoc loc store
+    | nil => None
   end.
 
 (**
-Definition lista := (LOC "A", 1)::(LOC "B", 2)::(LOC "C", 3)::nil.
-Compute readLoc (LOC "A") lista.
-Compute readLoc (LOC "Z") lista.
+Definition lista := (@"A", 1)::(@"B", 2)::(@"C", 3)::nil.
+Compute readLoc (@"A") lista.
+Compute readLoc (@"Z") lista.
 **)
 
 End ImpLanguage.
