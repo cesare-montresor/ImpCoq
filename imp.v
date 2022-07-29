@@ -99,8 +99,11 @@ Inductive execCommand : Com -> storeT -> storeT -> Prop :=
                   evalBexpr b s = true -> execCommand c1 s s' -> execCommand (IF b c1 c2) s s'
   | E_IF_FALSE    : forall (s s': storeT) (c1 c2: Com) (b: Bexpr),
                   evalBexpr b s = false -> execCommand c2 s s' -> execCommand (IF b c1 c2) s s'
-  | E_WHILE_TRUE  : forall (s s': storeT) (c: Com) (b: Bexpr),
-                  evalBexpr b s = true -> execCommand c s s' -> execCommand (WHILE b c) s s'
+  | E_WHILE_TRUE  : forall (s s' s'': storeT) (c: Com) (b: Bexpr),
+                  evalBexpr b s = true ->
+                  execCommand c s s'' ->
+                  execCommand (WHILE b c) s'' s' ->
+                  execCommand (WHILE b c) s s'
   | E_WHILE_FALSE : forall (s s': storeT) (c: Com) (b: Bexpr),
                   evalBexpr b s = false -> execCommand (WHILE b c) s s
 .
@@ -109,6 +112,29 @@ Definition equivalence (c1 c2: Com) : Prop :=
   forall (s s': storeT),
     execCommand c1 s s' <-> execCommand c2 s s'.
 
+Section Teorema_1.
+Axiom b: Bexpr.
+Axiom c: Com.
+Definition w  := WHILE b c.
+Definition w' := IF b (SEQ c w) SKIP.
 
+Theorem unroll_while : equivalence w w'.
+Proof.
+unfold equivalence.
+unfold w'.
+unfold w.
+intros.
+split.
+- intro. inversion H.
+  + apply E_IF_TRUE. assumption.
+    apply E_SEQ with (s':=s''); assumption.
+  + apply E_IF_FALSE. assumption. constructor.
+- intro. inversion H.
+  + inversion H6. subst.
+    apply E_WHILE_TRUE with (s'':=s'1); assumption.
+  + inversion H6. subst.
+    apply E_WHILE_FALSE; assumption.
+Qed.
+End Teorema_1.
 
 End ImpLanguage.
