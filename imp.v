@@ -3,20 +3,25 @@ Require Import String.
 Require Import List.
 Require Import ZArith.
 
+Open Scope Z.
+
 Section ImpLanguage.
 
-(** ** ----------- Store ----------- **)
-
-(** ** Lo store rappresenta la memoria del programma, viene realizzato utilizzando liste di coppie (loc, val).
-**)
+(** * Store
+      Lo store rappresenta la memoria del programma, viene realizzato utilizzando liste di coppie locazione, intero.
+      Abbiamo scelto di implementare le locazioni come un nuovo tipo con un solo costruttore LOC,
+      che data una stringa costruisce una locazione.
+ *)
  
-(** ** Costruttore per il tipo Loc **)
+(** Costruttore per il tipo Loc *)
 Inductive Loc: Type := LOC: string -> Loc.
 
-(** ** Definizione di storeT come lista di coppie (Loc,Z). **)
+(** Definiamo per semplicità il tipo dello store come una abbreviazione di lista (Loc,Z). *)
 Definition storeT := list (Loc * Z).
 
-(** ** Funzione che definisce l'uguagliaza fra due location. **)
+(** Definiamo inoltre una funzione che calcola se due locazioni sono uguali, cioè se hanno
+    lo stesso nome. Per fare questo estraiamo le stringhe dalle due locazioni e le confrontiamo
+    con la funzione di uguaglianza tra stringhe. *)
 Definition locEq (loc1 loc2: Loc) : bool :=
   match loc1 with
     LOC str => 
@@ -25,21 +30,27 @@ Definition locEq (loc1 loc2: Loc) : bool :=
     end
   end.
   
-(** ** Funzione ricorsiva per leggere da uno store.
-Scorre la lista cercando la locazione indicata, se la trova, restituisce il valore associato, altrimenti ritorna 0.
-**)
+(** Questa funzione ricorsiva, data una locazione, restituisce il valore presente nello store
+    associato a quella locazione. Per fare questo controlla lo store una coppia alla volta:
+    se la prima locazione è uguale a quella che ci interessa restituisce il valore, altrimenti
+    richiama la stessa funzione sul resto della lista.
+    Se la locazione richiesta non viene trovata restituisce zero, perchè nel testo del progetto ogni store
+    contiene tutte le possibili variabili inizializzate a zero.*)
 Fixpoint readLoc (loc: Loc) (store: storeT) {struct store} : Z:= 
   match store with
     | (loc',n)::store' => 
         if locEq loc loc' then n else readLoc loc store'
-    | nil => 0 (**Stato iniziale**)
+    | nil => 0 (*stato iniziale*)
   end.
 
 
-(** ** Funzione ricorsiva per scrivere da uno store, chiamata assignLoc.
-Scorre la lista cercando la locazione indicata, se la trova, 
-sostituisce la coppia con una nuova coppia (loc, val). Se non trova la location si limita ad aggiungera la nuova coppia.
-**)
+(** Questa funzione viene richiamata da assignLoc e effettua l'aggiornamento dello store ricorsivamente.
+    Scorre la lista cercando la locazione indicata, se la trova, 
+    sostituisce la coppia con una nuova coppia (loc, val). 
+    Se non trova la location si limita ad aggiungera la nuova coppia.
+    In ogni momento tiene in memoria la parte precedente e successiva alla coppia corrente,
+    in modo da poter ricomporre correttamente lo store.
+*)
 Fixpoint assignLocRec (loc: Loc) (head: storeT) (tail: storeT) (n: Z) {struct tail} : storeT:=
   match tail with
     | (currloc,currn)::tail' => 
@@ -50,25 +61,31 @@ Fixpoint assignLocRec (loc: Loc) (head: storeT) (tail: storeT) (n: Z) {struct ta
     | nil => (loc,n)::head
   end.
 
-(** ** Funzione ricorsiva per scrivere nella meoria
-L'implementazione effettiva è dentro assignLocRec.
-**)
+(** Questa funzione serve per modificare il valore di una locazione nello store.
+    Richiama la sua implementazione assignLocRec.
+*)
 Definition assignLoc (loc: Loc) (store: storeT) (n: Z) : storeT:=
   assignLocRec loc nil store n.
 
 
-(** Store: Test **)
+(** Test delle funzioni implementate *)
 
-Definition mem := ( (LOC "A"), 1%Z )::( (LOC "B"), 2%Z)::( (LOC "C"), 3%Z)::nil.
+Definition mem := ( (LOC "A"), 1)::( (LOC "B"), 2)::( (LOC "C"), 3)::nil.
 Compute readLoc (LOC "A") mem.
-Compute readLoc (LOC "B") mem.
+Definition mem2 := assignLoc (LOC "A") mem 2.
+Compute readLoc (LOC "A") mem2.
+Compute readLoc (LOC "B") mem2.
+Reset mem. Reset mem2.
 
 
-(** ** ----------- IMP Sintassi ----------- **)
+(** * Sintassi di IMP
+     In questa sezione definiamo i tipi induttivi del nostro linguaggio:
+     le espressioni aritmetiche, le espressioni booleane e i comandi.
+     Ogni costruttore definisce una espressione o un comando diverso.
+*)
 
-(** **  Espressioni Aritmentiche 
-$ a := n | var | a_0 + a_1 | a_0 - a_1 | a_0 \ * \ a_1 $
-**)
+(**  Espressioni Aritmetiche *)
+(** _a := n | var | a0 + a1 | a0 - a1 | a0 * a1_ *)
 
 Inductive Aexpr: Type :=
   | N   : Z -> Aexpr
@@ -78,9 +95,8 @@ Inductive Aexpr: Type :=
   | MUL : Aexpr -> Aexpr -> Aexpr
 .
 
-(** **  Espressioni Booleane 
-$ b := true | false | a_0 == a_1 | a_0 \leq a_1 | \neg b | b_0 \wedge b_1 | b_0 \vee b_1 $
-**)
+(** Espressioni Booleane *)
+(** _b := true | false | a0 == a1 | a0 ≤ a1 | ¬ b | b0 ∧ b1 | b0 ∨ b1_ *)
 
 Inductive Bexpr: Type :=
   | TT   
@@ -92,9 +108,9 @@ Inductive Bexpr: Type :=
   | OR  : Bexpr -> Bexpr -> Bexpr
 .
 
-(** ** Comandi
+(** Comandi
 $ c := skip | X := a | c_0;c_1 | if \ b \ then \ c_0 \ else \ c_1 | while \ b \ do \ c $
-**)
+*)
 
 Inductive Com: Type :=
   | SKIP
@@ -104,10 +120,10 @@ Inductive Com: Type :=
   | WHILE : Bexpr -> Com -> Com
 .
 
-(** ** ----------- IMP Semantica ----------- **)
+(** * Sematica di IMP *)
 
-(** ** Semantica operazionale delle espressioni aritmentiche 
-**)
+(** Semantica operazionale delle espressioni aritmentiche 
+*)
 Fixpoint evalAexpr (aexpr: Aexpr) (store: storeT) : Z :=
   match aexpr with
     | N n       => n
@@ -117,8 +133,8 @@ Fixpoint evalAexpr (aexpr: Aexpr) (store: storeT) : Z :=
     | MUL e1 e2 => (evalAexpr e1 store) * (evalAexpr e2 store)
   end.
 
-(** ** Semantica operazionale delle espressioni booleane. 
-**)
+(** Semantica operazionale delle espressioni booleane. 
+*)
 Fixpoint evalBexpr (bexpr: Bexpr) (store: storeT) : bool :=
   match bexpr with
     | TT        => true
@@ -129,8 +145,8 @@ Fixpoint evalBexpr (bexpr: Bexpr) (store: storeT) : bool :=
     | AND e1 e2 => andb (evalBexpr e1 store) (evalBexpr e2 store)
     | OR e1 e2  => orb (evalBexpr e1 store) (evalBexpr e2 store)
   end.
-(** ** Semantica operazionale dell'esecuzione dei comandi.
-**)
+(** Semantica operazionale dell'esecuzione dei comandi.
+*)
 Inductive execCommand : Com -> storeT -> storeT -> Prop :=
   | E_SKIP        : forall store: storeT, 
                       execCommand SKIP store store
@@ -157,7 +173,7 @@ Inductive execCommand : Com -> storeT -> storeT -> Prop :=
                       evalBexpr b s = false -> 
                       execCommand (WHILE b c) s s
 .
-(** ** Equivalenza fra comandi **)
+(** Equivalenza fra comandi *)
 Definition comEq (c1 c2: Com) : Prop :=
   forall (s s': storeT),
     execCommand c1 s s' <-> execCommand c2 s s'.
@@ -165,7 +181,7 @@ Definition comEq (c1 c2: Com) : Prop :=
 
 End ImpLanguage.
 
-(** ** ----------- Theorems ----------- **)
+(** * Theorems*)
 
 Section Teoremi.
 
@@ -203,13 +219,12 @@ Section Teoremi.
     Definition var_x := (VAR x).
     Definition var_y := (VAR y).
     
-    (** README: LISTA ATTRAVERSO LE ASSIGN CREA PROBLEMI NELLA DIMOSTRAZIONE, LA CONCATENAZIONE FUNZIONA 
-    **)
+    (* README: LISTA ATTRAVERSO LE ASSIGN CREA PROBLEMI NELLA DIMOSTRAZIONE, LA CONCATENAZIONE FUNZIONA*)
     
-    (**
+    (*
     Definition initStore (store: storeT) := assignLoc y ( assignLoc x store 2 ) 3.
     Definition finalStore (store: storeT) := assignLoc y ( assignLoc x store 0 ) 12.
-    **)
+    *)
     Definition initStore (store: storeT) := ( x, 2%Z )::( y, 3%Z)::store.
     Definition finalStore (store: storeT) := ( x, 0%Z )::( y, 12%Z)::store.
     
@@ -220,14 +235,6 @@ Section Teoremi.
         ( ASS x (SUB var_x (N 1) ) )
       ).
     
-    (** REMOVE BEGIN: Testing equivalence **)
-    (**
-    Definition s0:storeT := nil.
-    Definition exp := evalBexpr (LEQ (N 1) var_x ) (initStore s0).
-    Compute exp.
-    **)
-    (** REMOVE END: Testing equivalence **)
-    
     Theorem while_step : 
       forall s:storeT, exists s':storeT, 
         execCommand prog (initStore s) s'.
@@ -237,15 +244,17 @@ Section Teoremi.
       exists (finalStore s). 
       eapply E_WHILE_TRUE. reflexivity.
       - eapply E_SEQ.
-        + apply E_ASS. (** Y = 6 **)
-        + apply E_ASS. (** X = 1 **)
+        + apply E_ASS. (* Y = 6 *)
+        + apply E_ASS. (* X = 1 *)
       - eapply E_WHILE_TRUE. reflexivity.
         + eapply E_SEQ.
-          * apply E_ASS. (** Y = 12 **)
-          * apply E_ASS. (** X = 0 **)
+          * apply E_ASS. (* Y = 12 *)
+          * apply E_ASS. (* X = 0 *)
         + eapply E_WHILE_FALSE. reflexivity.
     Qed.
   End Teorema_2.
-Section Teoremi.
+End Teoremi.
+
+Close Scope Z.
 
 
