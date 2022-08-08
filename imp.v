@@ -47,7 +47,6 @@ Fixpoint assignLocRec (loc: Loc) (head: storeT) (tail: storeT) (n: Z) {struct ta
             app ((loc,n)::head) tail' 
         else 
           assignLocRec loc ((currloc,currn)::head) tail' n
-    
     | nil => (loc,n)::head
   end.
 
@@ -135,9 +134,8 @@ Fixpoint evalBexpr (bexpr: Bexpr) (store: storeT) : bool :=
 Inductive execCommand : Com -> storeT -> storeT -> Prop :=
   | E_SKIP        : forall store: storeT, 
                       execCommand SKIP store store
-  | E_ASS         : forall (store: storeT) (exp:Aexpr) (loc: Loc) (val: Z),
-                      evalAexpr exp store = val ->
-                      execCommand (ASS loc exp) store (assignLoc loc store val)
+  | E_ASS         : forall (store: storeT) (exp:Aexpr) (loc: Loc),
+                      execCommand (ASS loc exp) store (assignLoc loc store (evalAexpr exp store))
   | E_SEQ         : forall (s s' s'': storeT) (c1 c2: Com),
                       execCommand c1 s s'            ->
                       execCommand c2 s' s''          ->
@@ -206,11 +204,14 @@ Section Teoremi.
     Definition var_y := (VAR y).
     
     (** README: LISTA ATTRAVERSO LE ASSIGN CREA PROBLEMI NELLA DIMOSTRAZIONE, LA CONCATENAZIONE FUNZIONA 
+    **)
+    
+    (**
     Definition initStore (store: storeT) := assignLoc y ( assignLoc x store 2 ) 3.
     Definition finalStore (store: storeT) := assignLoc y ( assignLoc x store 0 ) 12.
     **)
-    Definition initStore (store: storeT) := ( (LOC "x"), 2%Z )::( (LOC "y"), 3%Z)::store.
-    Definition finalStore (store: storeT) := ( (LOC "x"), 0%Z )::( (LOC "y"), 12%Z)::store.
+    Definition initStore (store: storeT) := ( x, 2%Z )::( y, 3%Z)::store.
+    Definition finalStore (store: storeT) := ( x, 0%Z )::( y, 12%Z)::store.
     
     Definition prog := 
       WHILE (LEQ (N 1) var_x ) 
@@ -220,25 +221,28 @@ Section Teoremi.
       ).
     
     (** REMOVE BEGIN: Testing equivalence **)
+    (**
     Definition s0:storeT := nil.
     Definition exp := evalBexpr (LEQ (N 1) var_x ) (initStore s0).
     Compute exp.
+    **)
     (** REMOVE END: Testing equivalence **)
     
-    Theorem while_step : forall s:storeT, exists s':storeT, execCommand prog (initStore s) s'.
+    Theorem while_step : 
+      forall s:storeT, exists s':storeT, 
+        execCommand prog (initStore s) s'.
     Proof.
       unfold prog.
       intros.
       exists (finalStore s). 
-      eapply E_WHILE_TRUE.
-      reflexivity.
+      eapply E_WHILE_TRUE. reflexivity.
       - eapply E_SEQ.
-        + apply E_ASS with ( val := 6%Z ). reflexivity.
-        + apply E_ASS with ( val := 1%Z ). reflexivity.
+        + apply E_ASS. (** Y = 6 **)
+        + apply E_ASS. (** X = 1 **)
       - eapply E_WHILE_TRUE. reflexivity.
         + eapply E_SEQ.
-          * apply E_ASS with ( val :=12%Z ). reflexivity.
-          * apply E_ASS with ( val :=0%Z ). reflexivity.
+          * apply E_ASS. (** Y = 12 **)
+          * apply E_ASS. (** X = 0 **)
         + eapply E_WHILE_FALSE. reflexivity.
     Qed.
   End Teorema_2.
