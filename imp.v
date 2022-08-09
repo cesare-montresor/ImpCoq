@@ -1,3 +1,15 @@
+(** * IMP
+  IMP è un linguaggio giocattolo imperativo;
+  permette di manipolare:
+  - Numeri interi,
+  - Valori booleani,
+  - Locazioni di memoria.
+  Inoltre durante l'esecuzione dei programmi è necessario
+  modificare i valori associati aelle locazioni, quindi viene
+  introdotto il concetto di _store_, che associa ad ogni
+  locazione un numero intero.
+*)
+
 Require Import Unicode.Utf8.
 Require Import String.
 Require Import List.
@@ -7,8 +19,9 @@ Open Scope Z.
 
 Section ImpLanguage.
 
-(** * Store
-      Lo store rappresenta la memoria del programma, viene realizzato utilizzando liste di coppie locazione, intero.
+(** ** Store
+      Lo store rappresenta la memoria del programma, viene realizzato utilizzando 
+      una lista di coppie (locazione, intero).
       Abbiamo scelto di implementare le locazioni come un nuovo tipo con un solo costruttore LOC,
       che data una stringa costruisce una locazione.
  *)
@@ -78,14 +91,21 @@ Compute readLoc (LOC "B") mem2.
 Reset mem. Reset mem2.
 
 
-(** * Sintassi di IMP
+(** ** Sintassi di IMP
      In questa sezione definiamo i tipi induttivi del nostro linguaggio:
      le espressioni aritmetiche, le espressioni booleane e i comandi.
      Ogni costruttore definisce una espressione o un comando diverso.
 *)
 
-(**  Espressioni Aritmetiche *)
-(** _a := n | var | a0 + a1 | a0 - a1 | a0 * a1_ *)
+(**  *** Espressioni Aritmetiche 
+    Una espressione aritmetica può essere:
+      - un numero
+      - una locazione
+      - somma di due espressioni aritmetiche
+      - sottrazione di due espressioni aritmetiche
+      - moltiplicazione di due espressioni aritmetiche
+    _a := n | var | a0 + a1 | a0 - a1 | a0 * a1_
+*)
 
 Inductive Aexpr: Type :=
   | N   : Z -> Aexpr
@@ -95,8 +115,16 @@ Inductive Aexpr: Type :=
   | MUL : Aexpr -> Aexpr -> Aexpr
 .
 
-(** Espressioni Booleane *)
-(** _b := true | false | a0 == a1 | a0 ≤ a1 | ¬ b | b0 ∧ b1 | b0 ∨ b1_ *)
+(** *** Espressioni Booleane 
+    Una espressione booleana può essere:
+      - un valore di verità tra espressioni booleane
+      - una uguaglianza tra espressioni booleane
+      - un confronto minore uguale tra espressioni booleane
+      - una negazione di espressioni booleane
+      - un and logico tra espressioni booleane
+      - un or logico tra espressioni booleane
+    _b := true | false | a0 == a1 | a0 ≤ a1 | ¬ b | b0 ∧ b1 | b0 ∨ b1_
+*)
 
 Inductive Bexpr: Type :=
   | TT   
@@ -108,8 +136,14 @@ Inductive Bexpr: Type :=
   | OR  : Bexpr -> Bexpr -> Bexpr
 .
 
-(** Comandi
-$ c := skip | X := a | c_0;c_1 | if \ b \ then \ c_0 \ else \ c_1 | while \ b \ do \ c $
+(** *** Comandi
+    Un comando può essere:
+      - uno skip (non fa nulla)
+      - un assegnamento di una espressione aritmetica ad una locazione
+      - sequenza di due comandi
+      - un costrutto if
+      - un costrutto while
+    _c := skip | X := a | c0;c1 | if b then c0 else c1 | while b do c_
 *)
 
 Inductive Com: Type :=
@@ -120,10 +154,14 @@ Inductive Com: Type :=
   | WHILE : Bexpr -> Com -> Com
 .
 
-(** * Sematica di IMP *)
-
-(** Semantica operazionale delle espressioni aritmentiche 
+(** ** Sematica di IMP 
+    In questa sezione definiamo come vengono valutate... finire
 *)
+
+(** *** Semantica operazionale delle espressioni aritmentiche
+    descrizione di fixpoint e di cosa fa la funzione
+*)
+
 Fixpoint evalAexpr (aexpr: Aexpr) (store: storeT) : Z :=
   match aexpr with
     | N n       => n
@@ -133,8 +171,10 @@ Fixpoint evalAexpr (aexpr: Aexpr) (store: storeT) : Z :=
     | MUL e1 e2 => (evalAexpr e1 store) * (evalAexpr e2 store)
   end.
 
-(** Semantica operazionale delle espressioni booleane. 
+(** *** Semantica operazionale delle espressioni booleane.
+    descrizione di fixpoint e di cosa fa la funzione
 *)
+
 Fixpoint evalBexpr (bexpr: Bexpr) (store: storeT) : bool :=
   match bexpr with
     | TT        => true
@@ -145,8 +185,22 @@ Fixpoint evalBexpr (bexpr: Bexpr) (store: storeT) : bool :=
     | AND e1 e2 => andb (evalBexpr e1 store) (evalBexpr e2 store)
     | OR e1 e2  => orb (evalBexpr e1 store) (evalBexpr e2 store)
   end.
-(** Semantica operazionale dell'esecuzione dei comandi.
+  
+(** *** Semantica operazionale dell'esecuzione dei comandi.
+    Per la valutazione dei comandi non abbiamo potuto definire
+    un'altra funzione ricorsiva con [Fixpoint]: dal momento che
+    nel linguaggio IMP il <<while>> può non terminare, avremmo
+    dovuto codificare questo comportamento nella funzione. Coq
+    però non accetta funzioni ricorsive non totali. Abbiamo quindi
+    definito l'esecuzione dei comandi come un predicato induttivo:
+    tramite esso non è possibile eseguire un comando con [Compute],
+    però è possibile dimostrare proprietà sui comandi stessi (ad
+    esempio, che terminano in un certo stato, che sono equivalenti 
+    ad altri ecc...).
+    Per definire questo predicato abbiamo creato un costruttore
+    per ogni regola della semantica, trasformandole in assiomi.
 *)
+
 Inductive execCommand : Com -> storeT -> storeT -> Prop :=
   | E_SKIP        : forall store: storeT, 
                       execCommand SKIP store store
@@ -173,7 +227,9 @@ Inductive execCommand : Com -> storeT -> storeT -> Prop :=
                       evalBexpr b s = false -> 
                       execCommand (WHILE b c) s s
 .
-(** Equivalenza fra comandi *)
+(** ** Equivalenza fra comandi 
+  dire come è definita
+*)
 Definition comEq (c1 c2: Com) : Prop :=
   forall (s s': storeT),
     execCommand c1 s s' <-> execCommand c2 s s'.
@@ -181,33 +237,48 @@ Definition comEq (c1 c2: Com) : Prop :=
 
 End ImpLanguage.
 
-(** * Theorems*)
+(** ** Theorems *)
 
 Section Teoremi.
 
+  (** *** Teorema 1
+      Questo teorema chiede di dimostrare l'equivalenza tra
+      due programmi. Il primo programma è un semplice ciclo
+      <<while>> generico, mentre il secondo è l'unrolling
+      di un ciclo dello stesso <<while>>, ossia la esplicita
+      valutazione della condizione tramite un if; se la condizione
+      è positiva si esegue il comando più il <<while>> originario,
+      altrimenti <<skip>>.
+  *)
   
   Section Teorema_1.
-    Axiom b: Bexpr.
-    Axiom c: Com.
+    Axiom b: Bexpr. (* espressione booleana generica*)
+    Axiom c: Com.   (* comando generico*)
     
     Definition w  := WHILE b c.
     Definition w' := IF b (SEQ c w) SKIP.
     
     Theorem unroll_while : comEq w w'.
     Proof.
-    unfold comEq.
-    unfold w'.
+    unfold comEq. (* sostituisco la definizione di equivalenza*)
+    unfold w'.    (* sostituisco le definizioni dei due programmi*)
     unfold w.
-    intros.
-    split.
-    - intro. inversion H.
-      + apply E_IF_TRUE. assumption.
+    intros.       (* elimino il quantificatore universale*)
+    split.        (* spezzo la doppia implicazione nei due versi*)
+    (* primo verso: while equivalente all'if*)
+    - intro. inversion H. 
+    (* inversion: For a inductively defined proposition, inversion introduces a goal
+    for each constructor of the proposition that isn't self-contradictory.
+    Each such goal includes the hypotheses needed to deduce the proposition.*)
+      + apply E_IF_TRUE. assumption. (* applico i costruttori del comando più esterno: devo poi dimostrare la testa dell'implicazione*)
         apply E_SEQ with (s':=s''); assumption.
       + apply E_IF_FALSE. assumption. constructor.
+    (* secondo verso: if equivalente al while*)
     - intro. inversion H.
-      + inversion H6. subst.
+      + inversion H6. subst. (*subst fa la riscrittura in entrambi i versi eliminando ipotesi inutili*)
         apply E_WHILE_TRUE with (s'':=s'1); assumption.
-      + inversion H6. subst.
+      + inversion H6. (* perchè il goal sia vero in questo caso ovviamente s deve essere uguale a s'*)
+        subst.
         apply E_WHILE_FALSE; assumption.
     Qed.
   End Teorema_1.
@@ -258,3 +329,4 @@ End Teoremi.
 Close Scope Z.
 
 
+(*.\coqdoc.exe -toc --parse-comments --no-index -utf8 -d "C:\Users\Jacopo\OneDrive\scuola\ragaut\ImpCoq\doc" "C:\Users\Jacopo\OneDrive\scuola\ragaut\ImpCoq\imp.v"*)
