@@ -283,6 +283,20 @@ Section Teoremi.
     Qed.
   End Teorema_1.
 
+(** *** Teorema 2
+Questo teorema chiede di dimostrare che il programma seguente:
+
+    σ = []
+    ...
+    σ[2/x][3/y]
+    while ( 1 <= x ) {
+        y = y * 2
+        x = x - 1
+    }
+
+Dato uno store arbitrario, σ inizializzato con x = 2 e y = 3,
+Il programma termina in N passi terminando in un nuovo stato σ*.
+*)
 
   Section Teorema_2.
     (* shortcut per LOC e VAR *)
@@ -290,11 +304,9 @@ Section Teoremi.
     Definition y := (LOC "y").
     Definition var_x := (VAR x).
     Definition var_y := (VAR y).
-    
     (* Utility per iniziare un qualsiasi store con stato iniziale e finale *)
     Definition initStore (store: storeT) := ( x, 2%Z )::( y, 3%Z)::store.
     Definition finalStore (store: storeT) := ( x, 0%Z )::( y, 12%Z)::store.
-    
     (* Programma: 
       while ( 1 <= x ) {
         y = y * 2
@@ -302,17 +314,16 @@ Section Teoremi.
       }
     *)
     Definition prog := 
-      WHILE (LEQ (N 1) var_x ) 
-      ( SEQ 
+      WHILE (LEQ (N 1) var_x )
+      ( SEQ
         ( ASS y (MUL var_y (N 2) ) )
         ( ASS x (SUB var_x (N 1) ) )
       ).
     
-    Theorem while_step : 
-      (* 
-        Dato un qualsiasi store iniziale con include x = 2 e y = 3 
-        Esiste uno store fianle (aka il while termina sempre )
-      *)
+    (* Dato un qualsiasi store iniziale con include x = 2 e y = 3 
+       Esiste uno store fianle (aka il while termina sempre )
+    *)
+    Theorem while_step: 
       forall s:storeT, exists s':storeT, 
         execCommand prog (initStore s) s'.
     Proof.
