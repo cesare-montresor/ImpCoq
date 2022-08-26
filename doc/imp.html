@@ -1,0 +1,573 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<title>imp</title>
+</head>
+
+<body>
+
+<div id="page">
+
+<div id="header">
+</div>
+
+<div id="main">
+
+<div class="code">
+</div>
+
+<div class="doc">
+<a id="lab1"></a><h1 class="section">IMP</h1>
+
+<a id="lab2"></a><h4 class="section">A.A. 2021/22, Jacopo Zagoli - Cesare Montresor</h4>
+
+  IMP è un linguaggio giocattolo imperativo che permette di manipolare:
+<ul class="doclist">
+<li> Numeri interi,
+
+</li>
+<li> Valori booleani,
+
+</li>
+<li> Locazioni di memoria.
+
+</li>
+</ul>
+  Inoltre, dato che durante l'esecuzione dei programmi è necessario
+  modificare i valori associati alle locazioni, viene
+  introdotto il concetto di <i>store</i>, che associa ad ogni
+  locazione di memoria un numero intero.
+
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="var">Unicode.Utf8</span>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="var">String</span>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="var">List</span>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="var">ZArith</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Open</span> <span class="id" title="keyword">Scope</span> <span class="id" title="var">Z</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Section</span> <span class="id" title="var">ImpLanguage</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a id="lab3"></a><h2 class="section">Store</h2>
+
+      Lo store rappresenta la memoria del programma, viene realizzato utilizzando 
+      una lista di coppie (locazione, intero).
+      Abbiamo scelto di implementare le locazioni come un nuovo tipo con un solo costruttore LOC,
+      che data una stringa costruisce una locazione.
+ 
+<div class="paragraph"> </div>
+
+ Costruttore per il tipo Loc 
+</div>
+<div class="code">
+<span class="id" title="keyword">Inductive</span> <span class="id" title="var">Loc</span>: <span class="id" title="keyword">Type</span> := <span class="id" title="var">LOC</span>: <span class="id" title="var">string</span> → <span class="id" title="var">Loc</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Definiamo per semplicità il tipo dello store come una abbreviazione 
+    di <span class="inlinecode"><span class="id" title="var">list</span>(<span class="id" title="var">Loc</span>×<span class="id" title="var">Z</span>)</span>. 
+
+</div>
+<div class="code">
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">storeT</span> := <span class="id" title="var">list</span> (<span class="id" title="var">Loc</span> × <span class="id" title="var">Z</span>).<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Definiamo inoltre una funzione che calcola se due locazioni sono uguali, cioè se hanno
+    lo stesso nome. Per fare questo estraiamo le stringhe dalle due locazioni e le confrontiamo
+    con la funzione di uguaglianza tra stringhe. 
+</div>
+<div class="code">
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">locEq</span> (<span class="id" title="var">loc1</span> <span class="id" title="var">loc2</span>: <span class="id" title="var">Loc</span>) : <span class="id" title="var">bool</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">loc1</span>, <span class="id" title="var">loc2</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">LOC</span> <span class="id" title="var">str</span>, <span class="id" title="var">LOC</span> <span class="id" title="var">str'</span> ⇒ <span class="id" title="var">eqb</span> <span class="id" title="var">str</span> <span class="id" title="var">str'</span><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Questa funzione ricorsiva, data una locazione, restituisce il valore presente nello store
+    associato a quella locazione. Per fare questo controlla lo store una coppia alla volta:
+    se la prima locazione è uguale a quella che ci interessa restituisce il valore, altrimenti
+    richiama la stessa funzione sul resto della lista.
+    Se la locazione richiesta non viene trovata restituisce zero, perchè nel testo del progetto ogni store
+    contiene tutte le possibili variabili inizializzate a zero.
+</div>
+<div class="code">
+<span class="id" title="keyword">Fixpoint</span> <span class="id" title="var">readLoc</span> (<span class="id" title="var">loc</span>: <span class="id" title="var">Loc</span>) (<span class="id" title="var">store</span>: <span class="id" title="var">storeT</span>) {<span class="id" title="keyword">struct</span> <span class="id" title="var">store</span>} : <span class="id" title="var">Z</span>:= <br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">store</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| (<span class="id" title="var">loc'</span>,<span class="id" title="var">n</span>)::<span class="id" title="var">store'</span> ⇒ <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">if</span> <span class="id" title="var">locEq</span> <span class="id" title="var">loc</span> <span class="id" title="var">loc'</span> <span class="id" title="keyword">then</span> <span class="id" title="var">n</span> <span class="id" title="keyword">else</span> <span class="id" title="var">readLoc</span> <span class="id" title="var">loc</span> <span class="id" title="var">store'</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">nil</span> ⇒ 0 <span class="comment">(*stato&nbsp;iniziale*)</span><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Questa funzione viene richiamata da assignLoc e effettua l'aggiornamento dello store ricorsivamente.
+    Scorre la lista cercando la locazione indicata, se la trova, 
+    sostituisce la coppia con una nuova coppia (loc, val). 
+    Se non trova la location si limita ad aggiungera la nuova coppia.
+    In ogni momento tiene in memoria la parte precedente e successiva alla coppia corrente,
+    in modo da poter ricomporre correttamente lo store.
+
+</div>
+<div class="code">
+<span class="id" title="keyword">Fixpoint</span> <span class="id" title="var">assignLocRec</span> (<span class="id" title="var">loc</span>: <span class="id" title="var">Loc</span>) (<span class="id" title="var">head</span>: <span class="id" title="var">storeT</span>) (<span class="id" title="var">tail</span>: <span class="id" title="var">storeT</span>) (<span class="id" title="var">n</span>: <span class="id" title="var">Z</span>) {<span class="id" title="keyword">struct</span> <span class="id" title="var">tail</span>} : <span class="id" title="var">storeT</span>:=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">tail</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| (<span class="id" title="var">currloc</span>,<span class="id" title="var">currn</span>)::<span class="id" title="var">tail'</span> ⇒ <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">if</span> <span class="id" title="var">locEq</span> <span class="id" title="var">currloc</span> <span class="id" title="var">loc</span> <span class="id" title="keyword">then</span> <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">app</span> ((<span class="id" title="var">loc</span>,<span class="id" title="var">n</span>)::<span class="id" title="var">head</span>) <span class="id" title="var">tail'</span> <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">else</span> <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">assignLocRec</span> <span class="id" title="var">loc</span> ((<span class="id" title="var">currloc</span>,<span class="id" title="var">currn</span>)::<span class="id" title="var">head</span>) <span class="id" title="var">tail'</span> <span class="id" title="var">n</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">nil</span> ⇒ (<span class="id" title="var">loc</span>,<span class="id" title="var">n</span>)::<span class="id" title="var">head</span><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Questa funzione serve per modificare il valore di una locazione nello store.
+    Richiama la sua implementazione assignLocRec.
+
+</div>
+<div class="code">
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">assignLoc</span> (<span class="id" title="var">loc</span>: <span class="id" title="var">Loc</span>) (<span class="id" title="var">store</span>: <span class="id" title="var">storeT</span>) (<span class="id" title="var">n</span>: <span class="id" title="var">Z</span>) : <span class="id" title="var">storeT</span>:=<br/>
+&nbsp;&nbsp;<span class="id" title="var">assignLocRec</span> <span class="id" title="var">loc</span> <span class="id" title="var">nil</span> <span class="id" title="var">store</span> <span class="id" title="var">n</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Test delle funzioni implementate 
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">mem</span> := ( (<span class="id" title="var">LOC</span> "A"), 1)::( (<span class="id" title="var">LOC</span> "B"), 2)::( (<span class="id" title="var">LOC</span> "C"), 3)::<span class="id" title="var">nil</span>.<br/>
+<span class="id" title="keyword">Compute</span> <span class="id" title="var">readLoc</span> (<span class="id" title="var">LOC</span> "A") <span class="id" title="var">mem</span>.<br/>
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">mem2</span> := <span class="id" title="var">assignLoc</span> (<span class="id" title="var">LOC</span> "A") <span class="id" title="var">mem</span> 2.<br/>
+<span class="id" title="keyword">Compute</span> <span class="id" title="var">readLoc</span> (<span class="id" title="var">LOC</span> "A") <span class="id" title="var">mem2</span>.<br/>
+<span class="id" title="keyword">Compute</span> <span class="id" title="var">readLoc</span> (<span class="id" title="var">LOC</span> "B") <span class="id" title="var">mem2</span>.<br/>
+<span class="id" title="keyword">Reset</span> <span class="id" title="var">mem</span>. <span class="id" title="var">Reset</span> <span class="id" title="var">mem2</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a id="lab4"></a><h2 class="section">Sintassi di IMP</h2>
+
+     In questa sezione definiamo i tipi induttivi del nostro linguaggio:
+     le espressioni aritmetiche, le espressioni booleane e i comandi.
+     Ogni costruttore definisce una espressione o un comando diverso.
+
+<div class="paragraph"> </div>
+
+<a id="lab5"></a><h3 class="section">Espressioni Aritmetiche</h3>
+
+    Una espressione aritmetica può essere:
+<ul class="doclist">
+<li> un numero
+
+</li>
+<li> una locazione
+
+</li>
+<li> somma di due espressioni aritmetiche
+
+</li>
+<li> sottrazione di due espressioni aritmetiche
+
+</li>
+<li> moltiplicazione di due espressioni aritmetiche
+
+</li>
+</ul>
+    <i>a := n | var | a0 + a1 | a0 - a1 | a0 * a1</i>
+
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Inductive</span> <span class="id" title="var">Aexpr</span>: <span class="id" title="keyword">Type</span> :=<br/>
+&nbsp;&nbsp;| <span class="id" title="var">N</span>   : <span class="id" title="var">Z</span> → <span class="id" title="var">Aexpr</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">VAR</span> : <span class="id" title="var">Loc</span> → <span class="id" title="var">Aexpr</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">SUM</span> : <span class="id" title="var">Aexpr</span> → <span class="id" title="var">Aexpr</span> → <span class="id" title="var">Aexpr</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">SUB</span> : <span class="id" title="var">Aexpr</span> → <span class="id" title="var">Aexpr</span> → <span class="id" title="var">Aexpr</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">MUL</span> : <span class="id" title="var">Aexpr</span> → <span class="id" title="var">Aexpr</span> → <span class="id" title="var">Aexpr</span><br/>
+.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a id="lab6"></a><h3 class="section">Espressioni Booleane</h3>
+
+    Una espressione booleana può essere:
+<ul class="doclist">
+<li> un valore di verità
+
+</li>
+<li> una uguaglianza tra espressioni booleane
+
+</li>
+<li> un confronto minore uguale tra espressioni booleane
+
+</li>
+<li> una negazione di espressioni booleane
+
+</li>
+<li> un and logico tra espressioni booleane
+
+</li>
+<li> un or logico tra espressioni booleane
+
+</li>
+</ul>
+    <i>b := true | false | a0 == a1 | a0 ≤ a1 | ¬ b | b0 ∧ b1 | b0 ∨ b1</i>
+
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Inductive</span> <span class="id" title="var">Bexpr</span>: <span class="id" title="keyword">Type</span> :=<br/>
+&nbsp;&nbsp;| <span class="id" title="var">TT</span>   <br/>
+&nbsp;&nbsp;| <span class="id" title="var">FF</span>  <br/>
+&nbsp;&nbsp;| <span class="id" title="var">EQ</span>  : <span class="id" title="var">Aexpr</span> → <span class="id" title="var">Aexpr</span> → <span class="id" title="var">Bexpr</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">LEQ</span> : <span class="id" title="var">Aexpr</span> → <span class="id" title="var">Aexpr</span> → <span class="id" title="var">Bexpr</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">NOT</span> : <span class="id" title="var">Bexpr</span> → <span class="id" title="var">Bexpr</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">AND</span> : <span class="id" title="var">Bexpr</span> → <span class="id" title="var">Bexpr</span> → <span class="id" title="var">Bexpr</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">OR</span>  : <span class="id" title="var">Bexpr</span> → <span class="id" title="var">Bexpr</span> → <span class="id" title="var">Bexpr</span><br/>
+.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a id="lab7"></a><h3 class="section">Comandi</h3>
+
+    Un comando può essere:
+<ul class="doclist">
+<li> uno skip (non fa nulla)
+
+</li>
+<li> un assegnamento di una espressione aritmetica ad una locazione
+
+</li>
+<li> sequenza di due comandi
+
+</li>
+<li> un costrutto if
+
+</li>
+<li> un costrutto while
+
+</li>
+</ul>
+    <i>c := skip | X := a | c0;c1 | if b then c0 else c1 | while b do c</i>
+
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Inductive</span> <span class="id" title="var">Com</span>: <span class="id" title="keyword">Type</span> :=<br/>
+&nbsp;&nbsp;| <span class="id" title="var">SKIP</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">ASS</span>   : <span class="id" title="var">Loc</span> → <span class="id" title="var">Aexpr</span> → <span class="id" title="var">Com</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">SEQ</span>   : <span class="id" title="var">Com</span> → <span class="id" title="var">Com</span> → <span class="id" title="var">Com</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">IF</span>    : <span class="id" title="var">Bexpr</span> → <span class="id" title="var">Com</span> → <span class="id" title="var">Com</span> → <span class="id" title="var">Com</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">WHILE</span> : <span class="id" title="var">Bexpr</span> → <span class="id" title="var">Com</span> → <span class="id" title="var">Com</span><br/>
+.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a id="lab8"></a><h2 class="section">Sematica di IMP</h2>
+
+    In questa sezione definiamo come vengono valutate le
+    espressioni aritmetiche, le espressioni booleane
+    ed i comandi.
+
+<div class="paragraph"> </div>
+
+<a id="lab9"></a><h3 class="section">Semantica operazionale delle espressioni aritmentiche</h3>
+
+    Con la parola chiave <span class="inlinecode"><span class="id" title="keyword">Fixpoint</span></span> definiamo una funzione
+    ricorsiva (totale, che quindi termina sempre).
+    La funzione evalAexpr quindi valuta ricorsivamente
+    una espressione aritmetica secondo le regole sotto indicate,
+    restituendo come risultato un numero intero.
+
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Fixpoint</span> <span class="id" title="var">evalAexpr</span> (<span class="id" title="var">aexpr</span>: <span class="id" title="var">Aexpr</span>) (<span class="id" title="var">store</span>: <span class="id" title="var">storeT</span>) : <span class="id" title="var">Z</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">aexpr</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">N</span> <span class="id" title="var">n</span>       ⇒ <span class="id" title="var">n</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">VAR</span> <span class="id" title="var">loc</span>   ⇒ <span class="id" title="var">readLoc</span> <span class="id" title="var">loc</span> <span class="id" title="var">store</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">SUM</span> <span class="id" title="var">e1</span> <span class="id" title="var">e2</span> ⇒ (<span class="id" title="var">evalAexpr</span> <span class="id" title="var">e1</span> <span class="id" title="var">store</span>) + (<span class="id" title="var">evalAexpr</span> <span class="id" title="var">e2</span> <span class="id" title="var">store</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">SUB</span> <span class="id" title="var">e1</span> <span class="id" title="var">e2</span> ⇒ (<span class="id" title="var">evalAexpr</span> <span class="id" title="var">e1</span> <span class="id" title="var">store</span>) - (<span class="id" title="var">evalAexpr</span> <span class="id" title="var">e2</span> <span class="id" title="var">store</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">MUL</span> <span class="id" title="var">e1</span> <span class="id" title="var">e2</span> ⇒ (<span class="id" title="var">evalAexpr</span> <span class="id" title="var">e1</span> <span class="id" title="var">store</span>) × (<span class="id" title="var">evalAexpr</span> <span class="id" title="var">e2</span> <span class="id" title="var">store</span>)<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a id="lab10"></a><h3 class="section">Semantica operazionale delle espressioni booleane</h3>
+
+    La seguente funzione ricorsiva valuta una espressione 
+    booleana secondo le regole definite dalla consegna,
+    e restituisce il valore booleano associato.
+
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Fixpoint</span> <span class="id" title="var">evalBexpr</span> (<span class="id" title="var">bexpr</span>: <span class="id" title="var">Bexpr</span>) (<span class="id" title="var">store</span>: <span class="id" title="var">storeT</span>) : <span class="id" title="var">bool</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">bexpr</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">TT</span>        ⇒ <span class="id" title="var">true</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">FF</span>        ⇒ <span class="id" title="var">false</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">EQ</span> <span class="id" title="var">e1</span> <span class="id" title="var">e2</span>  ⇒ (<span class="id" title="var">Z.eqb</span> (<span class="id" title="var">evalAexpr</span> <span class="id" title="var">e1</span> <span class="id" title="var">store</span>) (<span class="id" title="var">evalAexpr</span> <span class="id" title="var">e2</span> <span class="id" title="var">store</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">LEQ</span> <span class="id" title="var">e1</span> <span class="id" title="var">e2</span> ⇒ (<span class="id" title="var">Z.leb</span> (<span class="id" title="var">evalAexpr</span> <span class="id" title="var">e1</span> <span class="id" title="var">store</span>) (<span class="id" title="var">evalAexpr</span> <span class="id" title="var">e2</span> <span class="id" title="var">store</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">NOT</span> <span class="id" title="var">e1</span>    ⇒ <span class="id" title="var">negb</span> (<span class="id" title="var">evalBexpr</span> <span class="id" title="var">e1</span> <span class="id" title="var">store</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">AND</span> <span class="id" title="var">e1</span> <span class="id" title="var">e2</span> ⇒ <span class="id" title="var">andb</span> (<span class="id" title="var">evalBexpr</span> <span class="id" title="var">e1</span> <span class="id" title="var">store</span>) (<span class="id" title="var">evalBexpr</span> <span class="id" title="var">e2</span> <span class="id" title="var">store</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">OR</span> <span class="id" title="var">e1</span> <span class="id" title="var">e2</span>  ⇒ <span class="id" title="var">orb</span> (<span class="id" title="var">evalBexpr</span> <span class="id" title="var">e1</span> <span class="id" title="var">store</span>) (<span class="id" title="var">evalBexpr</span> <span class="id" title="var">e2</span> <span class="id" title="var">store</span>)<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a id="lab11"></a><h3 class="section">Semantica operazionale dell'esecuzione dei comandi</h3>
+
+    Per la valutazione dei comandi non abbiamo potuto definire
+    un'altra funzione ricorsiva con <span class="inlinecode"><span class="id" title="keyword">Fixpoint</span></span>: dal momento che
+    nel linguaggio IMP il <code>while</code> può non terminare, avremmo
+    dovuto codificare questo comportamento nella funzione. Coq
+    però non accetta funzioni ricorsive non totali. Abbiamo quindi
+    definito l'esecuzione dei comandi come un predicato induttivo:
+    tramite esso non è possibile eseguire un comando con <span class="inlinecode"><span class="id" title="keyword">Compute</span></span>,
+    però è possibile dimostrare proprietà sui comandi stessi (ad
+    esempio, che essi terminano in un certo stato, che sono equivalenti 
+    ad altri ecc...).
+    Per definire questo predicato abbiamo creato un costruttore
+    per ogni regola della semantica, trasformandole in assiomi.
+
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Inductive</span> <span class="id" title="var">execCommand</span> : <span class="id" title="var">Com</span> → <span class="id" title="var">storeT</span> → <span class="id" title="var">storeT</span> → <span class="id" title="keyword">Prop</span> :=<br/>
+&nbsp;&nbsp;| <span class="id" title="var">E_SKIP</span>        : <span class="id" title="keyword">∀</span> <span class="id" title="var">store</span>: <span class="id" title="var">storeT</span>, <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">execCommand</span> <span class="id" title="var">SKIP</span> <span class="id" title="var">store</span> <span class="id" title="var">store</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">E_ASS</span>         : <span class="id" title="keyword">∀</span> (<span class="id" title="var">store</span>: <span class="id" title="var">storeT</span>) (<span class="id" title="var">exp</span>:<span class="id" title="var">Aexpr</span>) (<span class="id" title="var">loc</span>: <span class="id" title="var">Loc</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">execCommand</span> (<span class="id" title="var">ASS</span> <span class="id" title="var">loc</span> <span class="id" title="var">exp</span>) <span class="id" title="var">store</span> (<span class="id" title="var">assignLoc</span> <span class="id" title="var">loc</span> <span class="id" title="var">store</span> (<span class="id" title="var">evalAexpr</span> <span class="id" title="var">exp</span> <span class="id" title="var">store</span>))<br/>
+&nbsp;&nbsp;| <span class="id" title="var">E_SEQ</span>         : <span class="id" title="keyword">∀</span> (<span class="id" title="var">s</span> <span class="id" title="var">s'</span> <span class="id" title="var">s''</span>: <span class="id" title="var">storeT</span>) (<span class="id" title="var">c1</span> <span class="id" title="var">c2</span>: <span class="id" title="var">Com</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">execCommand</span> <span class="id" title="var">c1</span> <span class="id" title="var">s</span> <span class="id" title="var">s'</span>            →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">execCommand</span> <span class="id" title="var">c2</span> <span class="id" title="var">s'</span> <span class="id" title="var">s''</span>          →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">execCommand</span> (<span class="id" title="var">SEQ</span> <span class="id" title="var">c1</span> <span class="id" title="var">c2</span>) <span class="id" title="var">s</span> <span class="id" title="var">s''</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">E_IF_TRUE</span>     : <span class="id" title="keyword">∀</span> (<span class="id" title="var">s</span> <span class="id" title="var">s'</span>: <span class="id" title="var">storeT</span>) (<span class="id" title="var">c1</span> <span class="id" title="var">c2</span>: <span class="id" title="var">Com</span>) (<span class="id" title="var">b</span>: <span class="id" title="var">Bexpr</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">evalBexpr</span> <span class="id" title="var">b</span> <span class="id" title="var">s</span> = <span class="id" title="var">true</span>           →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">execCommand</span> <span class="id" title="var">c1</span> <span class="id" title="var">s</span> <span class="id" title="var">s'</span>            →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">execCommand</span> (<span class="id" title="var">IF</span> <span class="id" title="var">b</span> <span class="id" title="var">c1</span> <span class="id" title="var">c2</span>) <span class="id" title="var">s</span> <span class="id" title="var">s'</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">E_IF_FALSE</span>    : <span class="id" title="keyword">∀</span> (<span class="id" title="var">s</span> <span class="id" title="var">s'</span>: <span class="id" title="var">storeT</span>) (<span class="id" title="var">c1</span> <span class="id" title="var">c2</span>: <span class="id" title="var">Com</span>) (<span class="id" title="var">b</span>: <span class="id" title="var">Bexpr</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">evalBexpr</span> <span class="id" title="var">b</span> <span class="id" title="var">s</span> = <span class="id" title="var">false</span>          →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">execCommand</span> <span class="id" title="var">c2</span> <span class="id" title="var">s</span> <span class="id" title="var">s'</span>            →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">execCommand</span> (<span class="id" title="var">IF</span> <span class="id" title="var">b</span> <span class="id" title="var">c1</span> <span class="id" title="var">c2</span>) <span class="id" title="var">s</span> <span class="id" title="var">s'</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">E_WHILE_TRUE</span>  : <span class="id" title="keyword">∀</span> (<span class="id" title="var">s</span> <span class="id" title="var">s'</span> <span class="id" title="var">s''</span>: <span class="id" title="var">storeT</span>) (<span class="id" title="var">c</span>: <span class="id" title="var">Com</span>) (<span class="id" title="var">b</span>: <span class="id" title="var">Bexpr</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">evalBexpr</span> <span class="id" title="var">b</span> <span class="id" title="var">s</span> = <span class="id" title="var">true</span>           →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">execCommand</span> <span class="id" title="var">c</span> <span class="id" title="var">s</span> <span class="id" title="var">s''</span>            →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">execCommand</span> (<span class="id" title="var">WHILE</span> <span class="id" title="var">b</span> <span class="id" title="var">c</span>) <span class="id" title="var">s''</span> <span class="id" title="var">s'</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">execCommand</span> (<span class="id" title="var">WHILE</span> <span class="id" title="var">b</span> <span class="id" title="var">c</span>) <span class="id" title="var">s</span> <span class="id" title="var">s'</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">E_WHILE_FALSE</span> : <span class="id" title="keyword">∀</span> (<span class="id" title="var">s</span>: <span class="id" title="var">storeT</span>) (<span class="id" title="var">c</span>: <span class="id" title="var">Com</span>) (<span class="id" title="var">b</span>: <span class="id" title="var">Bexpr</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">evalBexpr</span> <span class="id" title="var">b</span> <span class="id" title="var">s</span> = <span class="id" title="var">false</span> → <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">execCommand</span> (<span class="id" title="var">WHILE</span> <span class="id" title="var">b</span> <span class="id" title="var">c</span>) <span class="id" title="var">s</span> <span class="id" title="var">s</span><br/>
+.<br/>
+</div>
+
+<div class="doc">
+<a id="lab12"></a><h2 class="section">Equivalenza fra comandi</h2>
+
+  Il concetto di equivalenza fra due comandi è qui intuitivamente
+  definito nel seguente modo: per ogni store arbitrario, eseguendo
+  con quello store i due programmi, essi termineranno con lo stesso
+  store finale.
+  Questo concetto viene utilizzato nel primo teorema.
+
+</div>
+<div class="code">
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">comEq</span> (<span class="id" title="var">c1</span> <span class="id" title="var">c2</span>: <span class="id" title="var">Com</span>) : <span class="id" title="keyword">Prop</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">s</span> <span class="id" title="var">s'</span>: <span class="id" title="var">storeT</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">execCommand</span> <span class="id" title="var">c1</span> <span class="id" title="var">s</span> <span class="id" title="var">s'</span> ↔ <span class="id" title="var">execCommand</span> <span class="id" title="var">c2</span> <span class="id" title="var">s</span> <span class="id" title="var">s'</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">End</span> <span class="id" title="var">ImpLanguage</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a id="lab13"></a><h2 class="section">Teoremi</h2>
+
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Section</span> <span class="id" title="var">Teoremi</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a id="lab14"></a><h3 class="section">Teorema 1</h3>
+
+      Questo teorema chiede di dimostrare l'equivalenza tra
+      due programmi. Il primo programma è un semplice ciclo
+      <code>while</code> generico, mentre il secondo è l'unrolling
+      di un ciclo dello stesso <code>while</code>, ossia la esplicita
+      valutazione della condizione tramite un if; se la condizione
+      è positiva si esegue il comando più il <code>while</code> originario,
+      altrimenti <code>skip</code>.
+  
+</div>
+<div class="code">
+
+<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Section</span> <span class="id" title="var">Teorema_1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Axiom</span> <span class="id" title="var">b</span>: <span class="id" title="var">Bexpr</span>. <span class="comment">(*&nbsp;espressione&nbsp;booleana&nbsp;generica*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Axiom</span> <span class="id" title="var">c</span>: <span class="id" title="var">Com</span>. <span class="comment">(*&nbsp;comando&nbsp;generico*)</span><br/>
+
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Definition</span> <span class="id" title="var">w</span>  := <span class="id" title="var">WHILE</span> <span class="id" title="var">b</span> <span class="id" title="var">c</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Definition</span> <span class="id" title="var">w'</span> := <span class="id" title="var">IF</span> <span class="id" title="var">b</span> (<span class="id" title="var">SEQ</span> <span class="id" title="var">c</span> <span class="id" title="var">w</span>) <span class="id" title="var">SKIP</span>.<br/>
+
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Theorem</span> <span class="id" title="var">unroll_while</span> : <span class="id" title="var">comEq</span> <span class="id" title="var">w</span> <span class="id" title="var">w'</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">unfold</span> <span class="id" title="var">comEq</span>. <span class="comment">(*&nbsp;sostituisco&nbsp;la&nbsp;definizione&nbsp;di&nbsp;equivalenza*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">unfold</span> <span class="id" title="var">w'</span>. <span class="comment">(*&nbsp;sostituisco&nbsp;le&nbsp;definizioni&nbsp;dei&nbsp;due&nbsp;programmi*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">unfold</span> <span class="id" title="var">w</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">intros</span>. <span class="comment">(*&nbsp;elimino&nbsp;il&nbsp;quantificatore&nbsp;universale*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">split</span>. <span class="comment">(*&nbsp;spezzo&nbsp;la&nbsp;doppia&nbsp;implicazione&nbsp;nei&nbsp;due&nbsp;versi*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;primo&nbsp;verso:&nbsp;while&nbsp;equivalente&nbsp;all'if*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;- <span class="id" title="tactic">intro</span>. <span class="id" title="tactic">inversion</span> <span class="id" title="var">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;inversion:&nbsp;For&nbsp;a&nbsp;inductively&nbsp;defined&nbsp;proposition,&nbsp;inversion&nbsp;introduces&nbsp;a&nbsp;goal<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;for&nbsp;each&nbsp;constructor&nbsp;of&nbsp;the&nbsp;proposition&nbsp;that&nbsp;isn't&nbsp;self-contradictory.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;Each&nbsp;such&nbsp;goal&nbsp;includes&nbsp;the&nbsp;hypotheses&nbsp;needed&nbsp;to&nbsp;deduce&nbsp;the&nbsp;proposition.*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="tactic">apply</span> <span class="id" title="var">E_IF_TRUE</span>. <span class="id" title="tactic">assumption</span>. <span class="comment">(*&nbsp;applico&nbsp;i&nbsp;costruttori&nbsp;del&nbsp;comando&nbsp;più&nbsp;esterno:&nbsp;devo&nbsp;poi&nbsp;dimostrare&nbsp;la&nbsp;testa&nbsp;dell'implicazione*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <span class="id" title="var">E_SEQ</span> <span class="id" title="keyword">with</span> (<span class="id" title="var">s'</span>:=<span class="id" title="var">s''</span>); <span class="id" title="tactic">assumption</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="tactic">apply</span> <span class="id" title="var">E_IF_FALSE</span>. <span class="id" title="tactic">assumption</span>. <span class="id" title="tactic">constructor</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;secondo&nbsp;verso:&nbsp;if&nbsp;equivalente&nbsp;al&nbsp;while*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;- <span class="id" title="tactic">intro</span>. <span class="id" title="tactic">inversion</span> <span class="id" title="var">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="tactic">inversion</span> <span class="id" title="var">H6</span>. <span class="id" title="tactic">subst</span>. <span class="comment">(*subst&nbsp;fa&nbsp;la&nbsp;riscrittura&nbsp;in&nbsp;entrambi&nbsp;i&nbsp;versi&nbsp;eliminando&nbsp;ipotesi&nbsp;inutili*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <span class="id" title="var">E_WHILE_TRUE</span> <span class="id" title="keyword">with</span> (<span class="id" title="var">s''</span>:=<span class="id" title="var">s'1</span>); <span class="id" title="tactic">assumption</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="tactic">inversion</span> <span class="id" title="var">H6</span>. <span class="comment">(*&nbsp;perchè&nbsp;il&nbsp;goal&nbsp;sia&nbsp;vero&nbsp;in&nbsp;questo&nbsp;caso&nbsp;ovviamente&nbsp;s&nbsp;deve&nbsp;essere&nbsp;uguale&nbsp;a&nbsp;s'*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <span class="id" title="var">E_WHILE_FALSE</span>; <span class="id" title="tactic">assumption</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Qed</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">End</span> <span class="id" title="var">Teorema_1</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a id="lab15"></a><h3 class="section">Teorema 2</h3>
+
+Questo teorema chiede di dimostrare che il programma seguente:
+<pre>
+    σ = []
+    ...
+    σ[2/x][3/y]
+    while ( 1 &lt;= x ) {
+        y = y * 2
+        x = x - 1
+    }
+</pre>
+Dato uno store arbitrario σ, inizializzato con x = 2 e y = 3,
+il programma termina in N passi in un nuovo stato σ*.
+
+</div>
+<div class="code">
+
+<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Section</span> <span class="id" title="var">Teorema_2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;shortcut&nbsp;per&nbsp;LOC&nbsp;e&nbsp;VAR*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Definition</span> <span class="id" title="var">x</span> := (<span class="id" title="var">LOC</span> "x").<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Definition</span> <span class="id" title="var">y</span> := (<span class="id" title="var">LOC</span> "y").<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Definition</span> <span class="id" title="var">var_x</span> := (<span class="id" title="var">VAR</span> <span class="id" title="var">x</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Definition</span> <span class="id" title="var">var_y</span> := (<span class="id" title="var">VAR</span> <span class="id" title="var">y</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;Utility&nbsp;per&nbsp;iniziare&nbsp;un&nbsp;qualsiasi&nbsp;store&nbsp;con&nbsp;stato&nbsp;iniziale&nbsp;e&nbsp;finale&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Definition</span> <span class="id" title="var">initStore</span> (<span class="id" title="var">store</span>: <span class="id" title="var">storeT</span>) := ( <span class="id" title="var">x</span>, 2%<span class="id" title="var">Z</span> )::( <span class="id" title="var">y</span>, 3%<span class="id" title="var">Z</span>)::<span class="id" title="var">store</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Definition</span> <span class="id" title="var">finalStore</span> (<span class="id" title="var">store</span>: <span class="id" title="var">storeT</span>) := ( <span class="id" title="var">x</span>, 0%<span class="id" title="var">Z</span> )::( <span class="id" title="var">y</span>, 12%<span class="id" title="var">Z</span>)::<span class="id" title="var">store</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;Programma:&nbsp;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;while&nbsp;(&nbsp;1&nbsp;&lt;=&nbsp;x&nbsp;)&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;y&nbsp;=&nbsp;y&nbsp;*&nbsp;2<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;x&nbsp;=&nbsp;x&nbsp;-&nbsp;1<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Definition</span> <span class="id" title="var">prog</span> := <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">WHILE</span> (<span class="id" title="var">LEQ</span> (<span class="id" title="var">N</span> 1) <span class="id" title="var">var_x</span> )<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;( <span class="id" title="var">SEQ</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;( <span class="id" title="var">ASS</span> <span class="id" title="var">y</span> (<span class="id" title="var">MUL</span> <span class="id" title="var">var_y</span> (<span class="id" title="var">N</span> 2) ) )<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;( <span class="id" title="var">ASS</span> <span class="id" title="var">x</span> (<span class="id" title="var">SUB</span> <span class="id" title="var">var_x</span> (<span class="id" title="var">N</span> 1) ) )<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;).<br/>
+
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;Dato&nbsp;un&nbsp;qualsiasi&nbsp;store&nbsp;iniziale&nbsp;con&nbsp;include&nbsp;x&nbsp;=&nbsp;2&nbsp;e&nbsp;y&nbsp;=&nbsp;3&nbsp;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Esiste&nbsp;uno&nbsp;store&nbsp;fianle&nbsp;(aka&nbsp;il&nbsp;while&nbsp;termina&nbsp;sempre&nbsp;)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Theorem</span> <span class="id" title="var">while_step</span>: <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">s</span>:<span class="id" title="var">storeT</span>, <span class="id" title="tactic">∃</span> <span class="id" title="var">s'</span>:<span class="id" title="var">storeT</span>, <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">execCommand</span> <span class="id" title="var">prog</span> (<span class="id" title="var">initStore</span> <span class="id" title="var">s</span>) <span class="id" title="var">s'</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">intros</span>. <span class="comment">(*&nbsp;estraggo&nbsp;il&nbsp;PerOgni&nbsp;store&nbsp;S*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">∃</span> (<span class="id" title="var">finalStore</span> <span class="id" title="var">s</span>). <span class="comment">(*&nbsp;Definisco&nbsp;uno&nbsp;stato&nbsp;finale&nbsp;per&nbsp;exist&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <span class="id" title="var">E_WHILE_TRUE</span>. <span class="comment">(*&nbsp;sostituisco&nbsp;il&nbsp;WHILE&nbsp;nei&nbsp;3&nbsp;subgoal&nbsp;di&nbsp;Inductive&nbsp;execCommand&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">reflexivity</span>. <span class="comment">(*&nbsp;risolvo&nbsp;l'espressione&nbsp;booleana&nbsp;del&nbsp;WHILE:&nbsp;true&nbsp;-&gt;&nbsp;esegui&nbsp;body&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- <span class="id" title="tactic">eapply</span> <span class="id" title="var">E_SEQ</span>. <span class="comment">(*&nbsp;sostituisco&nbsp;il&nbsp;SEQ&nbsp;dividendo&nbsp;i&nbsp;due&nbsp;assegnamenti&nbsp;per&nbsp;la&nbsp;prima&nbsp;iterazione&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="tactic">apply</span> <span class="id" title="var">E_ASS</span>. <span class="comment">(*&nbsp;sostituisco&nbsp;aggiorno&nbsp;lo&nbsp;store&nbsp;con&nbsp;il&nbsp;nuovo&nbsp;valore:&nbsp;Y&nbsp;=&nbsp;6&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="tactic">apply</span> <span class="id" title="var">E_ASS</span>. <span class="comment">(*&nbsp;sostituisco&nbsp;aggiorno&nbsp;lo&nbsp;store&nbsp;con&nbsp;il&nbsp;nuovo&nbsp;valore:&nbsp;X&nbsp;=&nbsp;1&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- <span class="id" title="tactic">eapply</span> <span class="id" title="var">E_WHILE_TRUE</span>. <span class="comment">(*&nbsp;sostituisco&nbsp;il&nbsp;WHILE&nbsp;nei&nbsp;3&nbsp;subgoal&nbsp;di&nbsp;Inductive&nbsp;execCommand&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">reflexivity</span>. <span class="comment">(*&nbsp;risolvo&nbsp;l'espressione&nbsp;booleana&nbsp;del&nbsp;WHILE:&nbsp;true&nbsp;-&gt;&nbsp;esegui&nbsp;body&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="tactic">eapply</span> <span class="id" title="var">E_SEQ</span>. <span class="comment">(*&nbsp;sostituisco&nbsp;il&nbsp;SEQ&nbsp;dividendo&nbsp;i&nbsp;due&nbsp;assegnamenti&nbsp;per&nbsp;la&nbsp;seconda&nbsp;iterazione&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;× <span class="id" title="tactic">apply</span> <span class="id" title="var">E_ASS</span>. <span class="comment">(*&nbsp;sostituisco&nbsp;aggiorno&nbsp;lo&nbsp;store&nbsp;con&nbsp;il&nbsp;nuovo&nbsp;valore:&nbsp;Y&nbsp;=&nbsp;12&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;× <span class="id" title="tactic">apply</span> <span class="id" title="var">E_ASS</span>. <span class="comment">(*&nbsp;sostituisco&nbsp;aggiorno&nbsp;lo&nbsp;store&nbsp;con&nbsp;il&nbsp;nuovo&nbsp;valore:&nbsp;X&nbsp;=&nbsp;0&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="tactic">eapply</span> <span class="id" title="var">E_WHILE_FALSE</span>. <span class="comment">(*&nbsp;sostituisco&nbsp;il&nbsp;WHILE&nbsp;con&nbsp;il&nbsp;goal&nbsp;definito&nbsp;in&nbsp;Inductive&nbsp;execCommand&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">reflexivity</span>. <span class="comment">(*&nbsp;risolvo&nbsp;l'espressione&nbsp;booleana&nbsp;del&nbsp;WHILE:&nbsp;false&nbsp;-&gt;&nbsp;fine&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Qed</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">End</span> <span class="id" title="var">Teorema_2</span>.<br/>
+<span class="id" title="keyword">End</span> <span class="id" title="var">Teoremi</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Close</span> <span class="id" title="keyword">Scope</span> <span class="id" title="var">Z</span>.<br/>
+
+<br/>
+<span class="comment">(*Generate&nbsp;doc:*)</span><br/>
+<span class="comment">(*&nbsp;.\coqdoc.exe&nbsp;--no-externals&nbsp;--parse-comments&nbsp;--no-index&nbsp;--short&nbsp;-utf8&nbsp;-d&nbsp;"C:\Users\Jacopo\OneDrive\scuola\ragaut\ImpCoq\doc"&nbsp;"C:\Users\Jacopo\OneDrive\scuola\ragaut\ImpCoq\imp.v"*)</span></div>
+<hr/>This page has been generated by <a href="http://coq.inria.fr/">coqdoc</a>
+</div>
+
+</div>
+
+</body>
+</html>

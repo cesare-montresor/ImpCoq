@@ -1,13 +1,13 @@
 (** * IMP
-  IMP è un linguaggio giocattolo imperativo;
-  permette di manipolare:
+  **** A.A. 2021/22, Jacopo Zagoli - Cesare Montresor
+  IMP è un linguaggio giocattolo imperativo che permette di manipolare:
   - Numeri interi,
   - Valori booleani,
   - Locazioni di memoria.
-  Inoltre durante l'esecuzione dei programmi è necessario
-  modificare i valori associati aelle locazioni, quindi viene
+  Inoltre, dato che durante l'esecuzione dei programmi è necessario
+  modificare i valori associati alle locazioni, viene
   introdotto il concetto di _store_, che associa ad ogni
-  locazione un numero intero.
+  locazione di memoria un numero intero.
 *)
 
 Require Import Unicode.Utf8.
@@ -29,18 +29,17 @@ Section ImpLanguage.
 (** Costruttore per il tipo Loc *)
 Inductive Loc: Type := LOC: string -> Loc.
 
-(** Definiamo per semplicità il tipo dello store come una abbreviazione di lista (Loc,Z). *)
+(** Definiamo per semplicità il tipo dello store come una abbreviazione 
+    di [list(Loc*Z)]. 
+*)
 Definition storeT := list (Loc * Z).
 
 (** Definiamo inoltre una funzione che calcola se due locazioni sono uguali, cioè se hanno
     lo stesso nome. Per fare questo estraiamo le stringhe dalle due locazioni e le confrontiamo
     con la funzione di uguaglianza tra stringhe. *)
 Definition locEq (loc1 loc2: Loc) : bool :=
-  match loc1 with
-    LOC str => 
-    match loc2 with 
-      LOC str' => eqb str str' 
-    end
+  match loc1, loc2 with
+    LOC str, LOC str' => eqb str str'
   end.
   
 (** Questa funzione ricorsiva, data una locazione, restituisce il valore presente nello store
@@ -117,7 +116,7 @@ Inductive Aexpr: Type :=
 
 (** *** Espressioni Booleane 
     Una espressione booleana può essere:
-      - un valore di verità tra espressioni booleane
+      - un valore di verità
       - una uguaglianza tra espressioni booleane
       - un confronto minore uguale tra espressioni booleane
       - una negazione di espressioni booleane
@@ -203,7 +202,7 @@ Fixpoint evalBexpr (bexpr: Bexpr) (store: storeT) : bool :=
     definito l'esecuzione dei comandi come un predicato induttivo:
     tramite esso non è possibile eseguire un comando con [Compute],
     però è possibile dimostrare proprietà sui comandi stessi (ad
-    esempio, che terminano in un certo stato, che sono equivalenti 
+    esempio, che essi terminano in un certo stato, che sono equivalenti 
     ad altri ecc...).
     Per definire questo predicato abbiamo creato un costruttore
     per ogni regola della semantica, trasformandole in assiomi.
@@ -249,7 +248,7 @@ Definition comEq (c1 c2: Com) : Prop :=
 
 End ImpLanguage.
 
-(** ** Theorems *)
+(** ** Teoremi *)
 
 Section Teoremi.
 
@@ -297,7 +296,7 @@ Section Teoremi.
 
 (** *** Teorema 2
 Questo teorema chiede di dimostrare che il programma seguente:
-
+<<
     σ = []
     ...
     σ[2/x][3/y]
@@ -305,7 +304,7 @@ Questo teorema chiede di dimostrare che il programma seguente:
         y = y * 2
         x = x - 1
     }
-
+>>
 Dato uno store arbitrario σ, inizializzato con x = 2 e y = 3,
 il programma termina in N passi in un nuovo stato σ*.
 *)
@@ -359,5 +358,5 @@ End Teoremi.
 
 Close Scope Z.
 
-
-(*.\coqdoc.exe -toc --parse-comments --no-index -utf8 -d "C:\Users\Jacopo\OneDrive\scuola\ragaut\ImpCoq\doc" "C:\Users\Jacopo\OneDrive\scuola\ragaut\ImpCoq\imp.v"*)
+(*Generate doc:*)
+(* .\coqdoc.exe --no-externals --parse-comments --no-index --short -utf8 -d "C:\Users\Jacopo\OneDrive\scuola\ragaut\ImpCoq\doc" "C:\Users\Jacopo\OneDrive\scuola\ragaut\ImpCoq\imp.v"*)
