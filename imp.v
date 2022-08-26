@@ -283,46 +283,64 @@ Section Teoremi.
     Qed.
   End Teorema_1.
 
+(** *** Teorema 2
+Questo teorema chiede di dimostrare che il programma seguente:
+
+    σ = []
+    ...
+    σ[2/x][3/y]
+    while ( 1 <= x ) {
+        y = y * 2
+        x = x - 1
+    }
+
+Dato uno store arbitrario, σ inizializzato con x = 2 e y = 3,
+Il programma termina in N passi terminando in un nuovo stato σ*.
+*)
 
   Section Teorema_2.
+    (* shortcut per LOC e VAR *)
     Definition x := (LOC "x").
     Definition y := (LOC "y").
     Definition var_x := (VAR x).
     Definition var_y := (VAR y).
-    
-    (* README: LISTA ATTRAVERSO LE ASSIGN CREA PROBLEMI NELLA DIMOSTRAZIONE, LA CONCATENAZIONE FUNZIONA*)
-    
-    (*
-    Definition initStore (store: storeT) := assignLoc y ( assignLoc x store 2 ) 3.
-    Definition finalStore (store: storeT) := assignLoc y ( assignLoc x store 0 ) 12.
-    *)
+    (* Utility per iniziare un qualsiasi store con stato iniziale e finale *)
     Definition initStore (store: storeT) := ( x, 2%Z )::( y, 3%Z)::store.
     Definition finalStore (store: storeT) := ( x, 0%Z )::( y, 12%Z)::store.
-    
+    (* Programma: 
+      while ( 1 <= x ) {
+        y = y * 2
+        x = x - 1
+      }
+    *)
     Definition prog := 
-      WHILE (LEQ (N 1) var_x ) 
-      ( SEQ 
+      WHILE (LEQ (N 1) var_x )
+      ( SEQ
         ( ASS y (MUL var_y (N 2) ) )
         ( ASS x (SUB var_x (N 1) ) )
       ).
     
-    Theorem while_step : 
+    (* Dato un qualsiasi store iniziale con include x = 2 e y = 3 
+       Esiste uno store fianle (aka il while termina sempre )
+    *)
+    Theorem while_step: 
       forall s:storeT, exists s':storeT, 
         execCommand prog (initStore s) s'.
     Proof.
-      unfold prog.
-      intros.
-      exists (finalStore s). 
-      eapply E_WHILE_TRUE. reflexivity.
-      - eapply E_SEQ.
-        + apply E_ASS. (* Y = 6 *)
-        + apply E_ASS. (* X = 1 *)
-      - eapply E_WHILE_TRUE. reflexivity.
-        + eapply E_SEQ.
-          * apply E_ASS. (* Y = 12 *)
-          * apply E_ASS. (* X = 0 *)
-        + eapply E_WHILE_FALSE. reflexivity.
-    Qed.
+      intros. (* estraggo il PerOgni store S*)
+      exists (finalStore s). (* Definisco uno stato finale per exist *)
+      eapply E_WHILE_TRUE. (* sostituisco il WHILE nei 3 subgoal di Inductive execCommand *)
+      reflexivity. (* risolvo l'espressione booleana del WHILE: true -> esegui body *)
+      - eapply E_SEQ. (* sostituisco il SEQ dividendo i due assegnamenti per la prima iterazione *)
+        + apply E_ASS. (* sostituisco aggiorno lo store con il nuovo valore: Y = 6 *)
+        + apply E_ASS. (* sostituisco aggiorno lo store con il nuovo valore: X = 1 *)
+      - eapply E_WHILE_TRUE. (* sostituisco il WHILE nei 3 subgoal di Inductive execCommand *)
+        reflexivity. (* risolvo l'espressione booleana del WHILE: true -> esegui body *)
+        + eapply E_SEQ. (* sostituisco il SEQ dividendo i due assegnamenti per la seconda iterazione *)
+          * apply E_ASS. (* sostituisco aggiorno lo store con il nuovo valore: Y = 12 *)
+          * apply E_ASS. (* sostituisco aggiorno lo store con il nuovo valore: X = 0 *)
+        + eapply E_WHILE_FALSE. (* sostituisco il WHILE con il goal definito in Inductive execCommand *)
+          reflexivity. (* risolvo l'espressione booleana del WHILE: false -> fine *)
   End Teorema_2.
 End Teoremi.
 
