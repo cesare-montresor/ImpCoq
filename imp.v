@@ -311,7 +311,7 @@ il programma termina in N passi in un nuovo stato σ*.
 *)
 
   Section Teorema_2.
-    (* shortcut per LOC e VAR *)
+    (* shortcut per LOC e VAR*)
     Definition x := (LOC "x").
     Definition y := (LOC "y").
     Definition var_x := (VAR x).
@@ -353,6 +353,7 @@ il programma termina in N passi in un nuovo stato σ*.
           * apply E_ASS. (* sostituisco aggiorno lo store con il nuovo valore: X = 0 *)
         + eapply E_WHILE_FALSE. (* sostituisco il WHILE con il goal definito in Inductive execCommand *)
           reflexivity. (* risolvo l'espressione booleana del WHILE: false -> fine *)
+     Qed.
   End Teorema_2.
 End Teoremi.
 
