@@ -155,11 +155,17 @@ Inductive Com: Type :=
 .
 
 (** ** Sematica di IMP 
-    In questa sezione definiamo come vengono valutate... finire
+    In questa sezione definiamo come vengono valutate le
+    espressioni aritmetiche, le espressioni booleane
+    ed i comandi.
 *)
 
 (** *** Semantica operazionale delle espressioni aritmentiche
-    descrizione di fixpoint e di cosa fa la funzione
+    Con la parola chiave [Fixpoint] definiamo una funzione
+    ricorsiva (totale, che quindi termina sempre).
+    La funzione evalAexpr quindi valuta ricorsivamente
+    una espressione aritmetica secondo le regole sotto indicate,
+    restituendo come risultato un numero intero.
 *)
 
 Fixpoint evalAexpr (aexpr: Aexpr) (store: storeT) : Z :=
@@ -172,7 +178,9 @@ Fixpoint evalAexpr (aexpr: Aexpr) (store: storeT) : Z :=
   end.
 
 (** *** Semantica operazionale delle espressioni booleane.
-    descrizione di fixpoint e di cosa fa la funzione
+    La seguente funzione ricorsiva valuta una espressione 
+    booleana secondo le regole definite dalla consegna,
+    e restituisce il valore booleano associato.
 *)
 
 Fixpoint evalBexpr (bexpr: Bexpr) (store: storeT) : bool :=
@@ -294,8 +302,8 @@ Questo teorema chiede di dimostrare che il programma seguente:
         x = x - 1
     }
 
-Dato uno store arbitrario, σ inizializzato con x = 2 e y = 3,
-Il programma termina in N passi terminando in un nuovo stato σ*.
+Dato uno store arbitrario σ, inizializzato con x = 2 e y = 3,
+il programma termina in N passi in un nuovo stato σ*.
 *)
 
   Section Teorema_2.
