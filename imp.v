@@ -97,7 +97,7 @@ Reset mem. Reset mem2.
      Ogni costruttore definisce una espressione o un comando diverso.
 *)
 
-(**  *** Espressioni Aritmetiche 
+(** *** Espressioni Aritmetiche 
     Una espressione aritmetica può essere:
       - un numero
       - una locazione
@@ -177,7 +177,7 @@ Fixpoint evalAexpr (aexpr: Aexpr) (store: storeT) : Z :=
     | MUL e1 e2 => (evalAexpr e1 store) * (evalAexpr e2 store)
   end.
 
-(** *** Semantica operazionale delle espressioni booleane.
+(** *** Semantica operazionale delle espressioni booleane
     La seguente funzione ricorsiva valuta una espressione 
     booleana secondo le regole definite dalla consegna,
     e restituisce il valore booleano associato.
@@ -194,7 +194,7 @@ Fixpoint evalBexpr (bexpr: Bexpr) (store: storeT) : bool :=
     | OR e1 e2  => orb (evalBexpr e1 store) (evalBexpr e2 store)
   end.
   
-(** *** Semantica operazionale dell'esecuzione dei comandi.
+(** *** Semantica operazionale dell'esecuzione dei comandi
     Per la valutazione dei comandi non abbiamo potuto definire
     un'altra funzione ricorsiva con [Fixpoint]: dal momento che
     nel linguaggio IMP il <<while>> può non terminare, avremmo
@@ -236,7 +236,11 @@ Inductive execCommand : Com -> storeT -> storeT -> Prop :=
                       execCommand (WHILE b c) s s
 .
 (** ** Equivalenza fra comandi 
-  dire come è definita
+  Il concetto di equivalenza fra due comandi è qui intuitivamente
+  definito nel seguente modo: per ogni store arbitrario, eseguendo
+  con quello store i due programmi, essi termineranno con lo stesso
+  store finale.
+  Questo concetto viene utilizzato nel primo teorema.
 *)
 Definition comEq (c1 c2: Com) : Prop :=
   forall (s s': storeT),
