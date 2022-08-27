@@ -295,7 +295,7 @@ Section Teoremi.
   End Teorema_1.
 
 (** *** Teorema 2
-Questo teorema chiede di dimostrare che il programma seguente:
+Questo teorema chiede di dimostrare che il seguente programma
 <<
     σ = []
     ...
@@ -305,8 +305,8 @@ Questo teorema chiede di dimostrare che il programma seguente:
         x = x - 1
     }
 >>
-Dato uno store arbitrario σ, inizializzato con x = 2 e y = 3,
-il programma termina in N passi in un nuovo stato σ*.
+dato uno store arbitrario σ, inizializzato con x = 2 e y = 3,
+termina in un nuovo stato σ*.
 *)
 
   Section Teorema_2.
