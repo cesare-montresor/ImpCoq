@@ -1,3 +1,3 @@
 # ImpCoq
-An implementation of IMP language in Coq with two proofs.
-The code is documented (in italian), you can generate a document with coqdoc.
+An implementation of the IMP toy language in Coq with two proofs.
+The code is documented (in italian), you can generate the documentation with coqdoc.
